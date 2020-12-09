@@ -63,6 +63,45 @@ public struct BSONDocument {
         self.storage.buffer.writeBytes([0])
     }
 
+    internal init(fromJSONObj obj: [String: JSON]) throws {
+        self = BSONDocument()
+        self.storage.buffer.moveWriterIndex(to: self.storage.buffer.writerIndex - 1)
+        for (k, v) in obj {
+            try self.appendJSON(v, forKey: k)
+        }
+        self.storage.buffer.writeInteger(0, as: UInt8.self)
+    }
+
+    internal mutating func appendJSON(_ json: JSON, forKey key: String) throws {
+        switch json {
+        case let .string(s):
+            self.storage.encodedLength += self.storage.append(key: key, value: .string(s))
+        case let .object(obj):
+            self.storage.buffer.writeInteger(BSONType.document.rawValue, as: UInt8.self)
+            self.storage.buffer.writeCString(key)
+            let start = self.storage.buffer.writerIndex
+
+            // reserve space for our byteLength that will be calculated
+            self.storage.buffer.writeInteger(0, endianness: .little, as: Int32.self)
+
+            for (key, value) in obj {
+                try self.appendJSON(value, forKey: key)
+            }
+            // BSON null terminator
+            self.storage.buffer.writeInteger(0, as: UInt8.self)
+
+            guard let byteLength = Int32(exactly: self.storage.buffer.writerIndex - start) else {
+                fatalError("Data is \(self.storage.buffer.writerIndex - start) bytes, "
+                               + "but maximum allowed BSON document size is \(Int32.max) bytes")
+            }
+            self.storage.buffer.setInteger(byteLength, at: start, endianness: .little)
+            // Set encodedLength in reserved space
+            self.storage.encodedLength += Int(byteLength)
+        default:
+            throw BSONError.InternalError(message: "not imeplemented \(json)")
+        }
+    }
+
     /**
      * Initializes a new `BSONDocument` from the provided BSON data.
      *
@@ -446,6 +485,16 @@ extension BSONDocument: Equatable {
     }
 }
 
+func time<T>(desc: String, printTime: Bool = true, f: () throws -> T) rethrows -> (Double, T) {
+    let date = Date()
+    let out = try f()
+    let elapsedMS = date.timeIntervalSinceNow * -1000
+    if printTime {
+    print("\(desc): \(elapsedMS)ms")
+    }
+    return (elapsedMS, out)
+}
+
 extension BSONDocument: BSONValue {
     /*
      * Initializes a `BSONDocument` from ExtendedJSON.
@@ -466,12 +515,19 @@ extension BSONDocument: BSONValue {
         guard case let .object(obj) = json else {
             return nil
         }
+
         var doc: [(String, BSON)] = []
         for (key, val) in obj {
+            // let (t, bsonValue) = try time(desc: "bson", printTime: false) { try BSON(fromExtJSON: val, keyPath: keyPath + [key]) }
+
+            // if t >= 0.05 {
+            //     print("SLOW: \(bsonValue.type) \(bsonValue) \(t)ms")
+            // }
             let bsonValue = try BSON(fromExtJSON: val, keyPath: keyPath + [key])
             doc.append((key, bsonValue))
         }
-        self = BSONDocument(keyValuePairs: doc)
+        
+        self = BSONDocument(keyValuePairs: doc) 
     }
 
     /// Converts this `BSONDocument` to a corresponding `JSON` in relaxed extendedJSON format.
@@ -509,8 +565,8 @@ extension BSONDocument: BSONValue {
     }
 
     internal func write(to buffer: inout ByteBuffer) {
-        var doc = ByteBuffer(self.storage.buffer.readableBytesView)
-        buffer.writeBuffer(&doc)
+        // var doc = ByteBuffer(self.storage.buffer.readableBytesView)
+        buffer.writeBytes(self.storage.buffer.readableBytesView)
     }
 }
 

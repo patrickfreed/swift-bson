@@ -79,6 +79,7 @@ extension BSONObjectID: BSONValue {
      *   - `nil` if the provided value is not an `ObjectID`.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
+        // self = BSONObjectID()
         // canonical and relaxed extended JSON
         guard let value = try json.unwrapObject(withKey: "$oid", keyPath: keyPath) else {
             return nil

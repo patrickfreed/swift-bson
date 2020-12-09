@@ -84,8 +84,8 @@ public struct BSONTimestamp: BSONValue, Equatable, Hashable {
     internal func toCanonicalExtendedJSON() -> JSON {
         [
             "$timestamp": [
-                "t": .number(Double(self.timestamp)),
-                "i": .number(Double(self.increment))
+                "t": .number(String(self.timestamp)),
+                "i": .number(String(self.increment))
             ]
         ]
     }

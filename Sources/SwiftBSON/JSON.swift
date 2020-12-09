@@ -1,71 +1,22 @@
 import Foundation
+import ExtrasJSON
 
-/// Enum representing a JSON value, used internally for modeling JSON
-/// during extendedJSON parsing/generation.
-internal enum JSON: Codable {
-    case number(Double)
-    case string(String)
-    case bool(Bool)
-    indirect case array([JSON])
-    indirect case object([String: JSON])
-    case null
-
-    /// Initialize a `JSON` from a decoder.
-    /// Tries to decode into each of the JSON types one by one until one succeeds or
-    /// throws an error indicating that the input is not a valid `JSON` type.
-    internal init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let d = try? container.decode(Double.self) {
-            self = .number(d)
-        } else if let s = try? container.decode(String.self) {
-            self = .string(s)
-        } else if let b = try? container.decode(Bool.self) {
-            self = .bool(b)
-        } else if let a = try? container.decode([JSON].self) {
-            self = .array(a)
-        } else if let d = try? container.decode([String: JSON].self) {
-            self = .object(d)
-        } else if container.decodeNil() {
-            self = .null
-        } else {
-            throw DecodingError.dataCorrupted(
-                DecodingError.Context(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "Not a valid JSON type"
-                ))
-        }
-    }
-
-    /// Encode a `JSON` to a container by encoding the type of this `JSON` instance.
-    internal func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case let .number(n):
-            try container.encode(n)
-        case let .string(s):
-            try container.encode(s)
-        case let .bool(b):
-            try container.encode(b)
-        case let .array(a):
-            try container.encode(a)
-        case let .object(o):
-            try container.encode(o)
-        case .null:
-            try container.encodeNil()
-        }
-    }
-}
+public typealias JSON = JSONValue
 
 extension JSON: ExpressibleByFloatLiteral {
     internal init(floatLiteral value: Double) {
         self = .number(value)
+
+extension JSON: ExpressibleByFloatLiteral {
+    public init(floatLiteral value: Double) {
+        self = .number(String(value))
     }
 }
 
 extension JSON: ExpressibleByIntegerLiteral {
     internal init(integerLiteral value: Int) {
         // The number `JSON` type is a Double, so we cast any integers to doubles.
-        self = .number(Double(value))
+        self = .number(String(value))
     }
 }
 
@@ -100,7 +51,7 @@ extension JSON {
         guard case let .number(n) = self else {
             return nil
         }
-        return n
+        return Double(n)
     }
 
     /// If this `JSON` is a `.string`, return it as a `String`. Otherwise, return nil.
@@ -201,4 +152,4 @@ extension JSON {
     }
 }
 
-extension JSON: Equatable {}
+// extension JSON: Equatable {}

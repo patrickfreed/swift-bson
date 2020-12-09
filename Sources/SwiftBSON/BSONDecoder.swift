@@ -497,6 +497,8 @@ extension _BSONDecoder {
             return val
         }
 
+        print("decoding \(T.self), have \(value)")
+
         self.storage.push(container: value)
         defer { self.storage.popContainer() }
         return try T(from: self)

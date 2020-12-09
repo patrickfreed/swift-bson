@@ -19,7 +19,7 @@ extension Double: BSONValue {
         switch json {
         case let .number(n):
             // relaxed extended JSON
-            self = n
+            self = Double(n)!
         case .object:
             // canonical extended JSON
             guard let value = try json.unwrapObject(withKey: "$numberDouble", keyPath: keyPath) else {
@@ -59,7 +59,7 @@ extension Double: BSONValue {
         if self.isInfinite || self.isNaN {
             return self.toCanonicalExtendedJSON()
         } else {
-            return .number(self)
+            return .number(String(self))
         }
     }
 

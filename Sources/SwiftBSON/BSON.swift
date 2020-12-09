@@ -1,4 +1,5 @@
 import Foundation
+import ExtrasJSON
 
 /// Enum representing a BSON value.
 /// - SeeAlso: bsonspec.org
@@ -85,30 +86,65 @@ public enum BSON {
     ///
     /// Throws:
     ///   - `DecodingError` if `json` is malformatted extended json
-    internal init(fromExtJSON json: JSON, keyPath: [String]) throws {
-        // Spec requires that we try int32, try int64, then try double for decoding numbers
-        if let int32 = try Int32(fromExtJSON: json, keyPath: keyPath) {
-            self = int32.bson
-            return
-        }
-        if let int64 = try Int64(fromExtJSON: json, keyPath: keyPath) {
-            self = int64.bson
-            return
-        }
-        for bsonType in BSON.allBSONTypes.values {
-            guard bsonType != Int32.self && bsonType != Int64.self && bsonType != BSONDocument.self else {
-                continue
+    internal init(fromExtJSON json: JSONValue, keyPath: [String]) throws {
+        switch json {
+        case let .number(s):
+            if let int32 = Int32(s) {
+                self = int32.bson
+            } else if let int64 = Int64(s) {
+                self = int64.bson
+            } else if let double = Double(s) {
+                self = .double(double)
+            } else {
+                throw BSONError.InternalError(message: "todo")
             }
-            if let value = try bsonType.init(fromExtJSON: json, keyPath: keyPath) {
-                self = value.bson
-                return
+        case let .bool(b):
+            self = .bool(b)
+        case let .null:
+            self = .null
+        case let .string(string):
+            self = .string(string)
+        case let .object(obj):
+            let (k, v) = obj.first!
+            switch (k, v) {
+            case let ("$numberInt", .string(string)):
+                self = .int32(Int32(string)!)
+            case let ("$numberLong", .string(string)):
+                self = .int64(Int64(string)!)
+            case let ("$numberDouble", .string(string)):
+                self = .double(Double(string)!)
+            default:
+                self = try BSONDocument(fromJSONObj: obj).bson
             }
+        default:
+            throw BSONError.InternalError(message: "todo parse \(json)")
         }
-        // Document accepts any JSON object so it should be tried after all the more specific BSON types are tried
-        guard let doc = try BSONDocument(fromExtJSON: json, keyPath: keyPath) else {
-            throw BSONError.InternalError(message: "Could not parse BSON from \(json)")
-        }
-        self = doc.bson
+        return
+        // // Spec requires that we try int32, try int64, then try double for decoding numbers
+        // if let int32 = try Int32(fromExtJSON: json, keyPath: keyPath) {
+        //     self = int32.bson
+        //     return
+        // }
+        // if let int64 = try Int64(fromExtJSON: json, keyPath: keyPath) {
+        //     self = int64.bson
+        //     return
+        // }
+
+        // // self = .bool(true)
+        // for bsonType in BSON.allBSONTypes.values {
+        //     guard bsonType != Int32.self && bsonType != Int64.self && bsonType != BSONDocument.self else {
+        //         continue
+        //     }
+        //     if let value = try bsonType.init(fromExtJSON: json, keyPath: keyPath) {
+        //         self = value.bson
+        //         return
+        //     }
+        // }
+        // // Document accepts any JSON object so it should be tried after all the more specific BSON types are tried
+        // guard let doc = try BSONDocument(fromExtJSON: json, keyPath: keyPath) else {
+        //     throw BSONError.InternalError(message: "Could not parse BSON from \(json)")
+        // }
+        // self = doc.bson
     }
 
     /// Converts this `BSON` to a corresponding `JSON` in relaxed extendedJSON format.
@@ -491,3 +527,23 @@ extension BSON: Codable {
         try self.bsonValue.encode(to: encoder)
     }
 }
+
+// enum BSONHelper {
+//     indirect case document([String: BSONHelper])
+//     case bson(BSON)
+
+//     internal init?(fromExtJSON json: JSON) throws {
+//         switch json {
+//         case let .object(obj):
+//             var kvp: [String: BSONHelper] = [:]
+//             return nil
+//         default:
+//             guard let bson = try BSON(fromExtJSON: json, keyPath: []) else {
+//                 return nil
+//             }
+//             self = .bson(bson)
+//         }
+
+//         return nil
+//     }
+// }

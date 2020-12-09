@@ -19,7 +19,7 @@ extension Int32: BSONValue {
         switch json {
         case let .number(n):
             // relaxed extended JSON
-            guard let int = Int32(exactly: n) else {
+            guard let int = Int32(n) else {
                 return nil
             }
             self = int
@@ -46,7 +46,7 @@ extension Int32: BSONValue {
 
     /// Converts this `Int32` to a corresponding `JSON` in relaxed extendedJSON format.
     internal func toRelaxedExtendedJSON() -> JSON {
-        .number(Double(self))
+        .number(String(self))
     }
 
     /// Converts this `Int32` to a corresponding `JSON` in canonical extendedJSON format.
@@ -89,7 +89,7 @@ extension Int64: BSONValue {
         switch json {
         case let .number(n):
             // relaxed extended JSON
-            guard let int = Int64(exactly: n) else {
+            guard let int = Int64(n) else {
                 return nil
             }
             self = int
@@ -116,7 +116,7 @@ extension Int64: BSONValue {
 
     /// Converts this `Int64` to a corresponding `JSON` in relaxed extendedJSON format.
     internal func toRelaxedExtendedJSON() -> JSON {
-        .number(Double(self))
+        .number(String(self))
     }
 
     /// Converts this `Int64` to a corresponding `JSON` in canonical extendedJSON format.
