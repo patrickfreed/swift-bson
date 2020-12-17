@@ -1,5 +1,5 @@
-import Foundation
 import ExtrasJSON
+import Foundation
 
 /// `ExtendedJSONDecoder` facilitates the decoding of ExtendedJSON into `Decodable` values.
 public class ExtendedJSONDecoder {
@@ -30,14 +30,14 @@ public class ExtendedJSONDecoder {
     /// - Returns: Decoded representation of the JSON input as an instance of `T`.
     /// - Throws: `DecodingError` if the JSON data is corrupt or if any value throws an error during decoding.
     public func decode<T: Decodable>(_: T.Type, from data: Data) throws -> T {
-        // Data --> JSON --> BSON --> T
+        // Data --> JSONValue --> BSON --> T
         // Takes in JSON as `Data` encoded with `.utf8` and runs it through a `JSONDecoder` to get an
         // instance of the `JSON` enum.
 
         let json = try JSONParser().parse(bytes: data)
 
         // Then a `BSON` enum instance is created via the `JSON`.
-        let bson = try BSON(fromExtJSON: json, keyPath: [])
+        let bson = try BSON(fromExtJSON: JSON(json), keyPath: [])
 
         // The `BSON` is then passed through a `BSONDecoder` where it is outputted as a `T`
         let bsonDecoder = BSONDecoder()

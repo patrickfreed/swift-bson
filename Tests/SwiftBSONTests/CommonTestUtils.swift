@@ -1,13 +1,13 @@
+import ExtrasJSON
 import Foundation
 import Nimble
 @testable import SwiftBSON
 import XCTest
 
 /// Cleans and normalizes given JSON Data for comparison purposes
-public func clean(json: Data) throws -> JSON {
-    let jsonDecoder = JSONDecoder()
+public func clean(json: Data) throws -> JSONValue {
     do {
-        let jsonEnum = try jsonDecoder.decode(JSON.self, from: json)
+        let jsonEnum = try JSONParser().parse(bytes: json)
         return jsonEnum
     } catch {
         fatalError("json should be decodable to jsonEnum")

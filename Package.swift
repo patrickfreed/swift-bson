@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/Quick/Nimble.git", .upToNextMajor(from: "8.0.0"))
     ],
     targets: [
-        .target(name: "SwiftBSON", dependencies: ["NIO"]),
+        .target(name: "SwiftBSON", dependencies: ["NIO", "ExtrasJSON"]),
         .testTarget(name: "SwiftBSONTests", dependencies: ["SwiftBSON", "Nimble"])
     ]
 )

@@ -158,7 +158,7 @@ extension BSONBinary: BSONValue {
      *   - `DecodingError` if `json` is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        if let uuidJSON = try json.unwrapObject(withKey: "$uuid", keyPath: keyPath) {
+        if let uuidJSON = try json.value.unwrapObject(withKey: "$uuid", keyPath: keyPath) {
             guard let uuidString = uuidJSON.stringValue else {
                 throw DecodingError._extendedJSONError(
                     keyPath: keyPath,
@@ -185,7 +185,7 @@ extension BSONBinary: BSONValue {
         }
 
         // canonical and relaxed extended JSON
-        guard let binary = try json.unwrapObject(withKey: "$binary", keyPath: keyPath) else {
+        guard let binary = try json.value.unwrapObject(withKey: "$binary", keyPath: keyPath) else {
             return nil
         }
         guard
@@ -233,8 +233,8 @@ extension BSONBinary: BSONValue {
     internal func toCanonicalExtendedJSON() -> JSON {
         [
             "$binary": [
-                "base64": .string(Data(self.data.readableBytesView).base64EncodedString()),
-                "subType": .string(String(format: "%02x", self.subtype.rawValue))
+                "base64": JSON(.string(Data(self.data.readableBytesView).base64EncodedString())),
+                "subType": JSON(.string(String(format: "%02x", self.subtype.rawValue)))
             ]
         ]
     }

@@ -81,7 +81,7 @@ extension BSONObjectID: BSONValue {
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // self = BSONObjectID()
         // canonical and relaxed extended JSON
-        guard let value = try json.unwrapObject(withKey: "$oid", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$oid", keyPath: keyPath) else {
             return nil
         }
         guard let str = value.stringValue else {
@@ -108,7 +108,7 @@ extension BSONObjectID: BSONValue {
 
     /// Converts this `BSONObjectID` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        ["$oid": .string(self.hex)]
+        ["$oid": JSON(.string(self.hex))]
     }
 
     internal static var bsonType: BSONType { .objectID }

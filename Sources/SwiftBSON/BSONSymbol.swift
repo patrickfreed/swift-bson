@@ -18,7 +18,7 @@ public struct BSONSymbol: BSONValue, CustomStringConvertible, Equatable, Hashabl
      *   - `nil` if the provided value is not an `Symbol`.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        guard let value = try json.unwrapObject(withKey: "$symbol", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$symbol", keyPath: keyPath) else {
             return nil
         }
         guard let str = value.stringValue else {
@@ -38,7 +38,7 @@ public struct BSONSymbol: BSONValue, CustomStringConvertible, Equatable, Hashabl
 
     /// Converts this `Symbol` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        ["$symbol": .string(self.stringValue)]
+        ["$symbol": JSON(.string(self.stringValue))]
     }
 
     internal static var bsonType: BSONType { .symbol }

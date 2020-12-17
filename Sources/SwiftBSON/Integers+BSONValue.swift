@@ -16,7 +16,7 @@ extension Int32: BSONValue {
      *   - `DecodingError` if `json` is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        switch json {
+        switch json.value {
         case let .number(n):
             // relaxed extended JSON
             guard let int = Int32(n) else {
@@ -25,7 +25,7 @@ extension Int32: BSONValue {
             self = int
         case .object:
             // canonical extended JSON
-            guard let value = try json.unwrapObject(withKey: "$numberInt", keyPath: keyPath) else {
+            guard let value = try json.value.unwrapObject(withKey: "$numberInt", keyPath: keyPath) else {
                 return nil
             }
             guard
@@ -46,12 +46,12 @@ extension Int32: BSONValue {
 
     /// Converts this `Int32` to a corresponding `JSON` in relaxed extendedJSON format.
     internal func toRelaxedExtendedJSON() -> JSON {
-        .number(String(self))
+        JSON(.number(String(self)))
     }
 
     /// Converts this `Int32` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        ["$numberInt": .string(String(describing: self))]
+        ["$numberInt": JSON(.string(String(describing: self)))]
     }
 
     internal static var bsonType: BSONType { .int32 }
@@ -86,7 +86,7 @@ extension Int64: BSONValue {
      *   - `DecodingError` if `json` is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        switch json {
+        switch json.value {
         case let .number(n):
             // relaxed extended JSON
             guard let int = Int64(n) else {
@@ -95,7 +95,7 @@ extension Int64: BSONValue {
             self = int
         case .object:
             // canonical extended JSON
-            guard let value = try json.unwrapObject(withKey: "$numberLong", keyPath: keyPath) else {
+            guard let value = try json.value.unwrapObject(withKey: "$numberLong", keyPath: keyPath) else {
                 return nil
             }
             guard
@@ -116,12 +116,12 @@ extension Int64: BSONValue {
 
     /// Converts this `Int64` to a corresponding `JSON` in relaxed extendedJSON format.
     internal func toRelaxedExtendedJSON() -> JSON {
-        .number(String(self))
+        JSON(.number(String(self)))
     }
 
     /// Converts this `Int64` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        ["$numberLong": .string(String(describing: self))]
+        ["$numberLong": JSON(.string(String(describing: self)))]
     }
 
     internal static var bsonType: BSONType { .int64 }

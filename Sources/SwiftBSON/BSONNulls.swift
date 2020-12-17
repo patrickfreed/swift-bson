@@ -15,7 +15,7 @@ internal struct BSONNull: BSONValue, Equatable {
      *
      */
     internal init?(fromExtJSON json: JSON, keyPath _: [String]) {
-        switch json {
+        switch json.value {
         case .null:
             // canonical or relaxed extended JSON
             self = BSONNull()
@@ -31,7 +31,7 @@ internal struct BSONNull: BSONValue, Equatable {
 
     /// Converts this `BSONNull` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        .null
+        JSON(.null)
     }
 
     internal static var bsonType: BSONType { .null }
@@ -68,7 +68,7 @@ internal struct BSONUndefined: BSONValue, Equatable {
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // canonical and relaxed extended JSON
-        guard let value = try json.unwrapObject(withKey: "$undefined", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$undefined", keyPath: keyPath) else {
             return nil
         }
         guard value.boolValue == true else {
@@ -124,7 +124,7 @@ internal struct BSONMinKey: BSONValue, Equatable {
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // canonical and relaxed extended JSON
-        guard let value = try json.unwrapObject(withKey: "$minKey", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$minKey", keyPath: keyPath) else {
             return nil
         }
         guard value.doubleValue == 1 else {
@@ -180,7 +180,7 @@ internal struct BSONMaxKey: BSONValue, Equatable {
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // canonical and relaxed extended JSON
-        guard let value = try json.unwrapObject(withKey: "$maxKey", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$maxKey", keyPath: keyPath) else {
             return nil
         }
         guard value.doubleValue == 1 else {

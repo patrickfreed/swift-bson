@@ -1,5 +1,5 @@
-import Foundation
 import ExtrasJSON
+import Foundation
 
 /// Enum representing a BSON value.
 /// - SeeAlso: bsonspec.org
@@ -86,8 +86,8 @@ public enum BSON {
     ///
     /// Throws:
     ///   - `DecodingError` if `json` is malformatted extended json
-    internal init(fromExtJSON json: JSONValue, keyPath: [String]) throws {
-        switch json {
+    internal init(fromExtJSON json: JSON, keyPath _: [String]) throws {
+        switch json.value {
         case let .number(s):
             if let int32 = Int32(s) {
                 self = int32.bson
@@ -100,7 +100,7 @@ public enum BSON {
             }
         case let .bool(b):
             self = .bool(b)
-        case let .null:
+        case .null:
             self = .null
         case let .string(string):
             self = .string(string)
@@ -120,31 +120,31 @@ public enum BSON {
             throw BSONError.InternalError(message: "todo parse \(json)")
         }
         return
-        // // Spec requires that we try int32, try int64, then try double for decoding numbers
-        // if let int32 = try Int32(fromExtJSON: json, keyPath: keyPath) {
-        //     self = int32.bson
-        //     return
-        // }
-        // if let int64 = try Int64(fromExtJSON: json, keyPath: keyPath) {
-        //     self = int64.bson
-        //     return
-        // }
+            // // Spec requires that we try int32, try int64, then try double for decoding numbers
+            // if let int32 = try Int32(fromExtJSON: json, keyPath: keyPath) {
+            //     self = int32.bson
+            //     return
+            // }
+            // if let int64 = try Int64(fromExtJSON: json, keyPath: keyPath) {
+            //     self = int64.bson
+            //     return
+            // }
 
-        // // self = .bool(true)
-        // for bsonType in BSON.allBSONTypes.values {
-        //     guard bsonType != Int32.self && bsonType != Int64.self && bsonType != BSONDocument.self else {
-        //         continue
-        //     }
-        //     if let value = try bsonType.init(fromExtJSON: json, keyPath: keyPath) {
-        //         self = value.bson
-        //         return
-        //     }
-        // }
-        // // Document accepts any JSON object so it should be tried after all the more specific BSON types are tried
-        // guard let doc = try BSONDocument(fromExtJSON: json, keyPath: keyPath) else {
-        //     throw BSONError.InternalError(message: "Could not parse BSON from \(json)")
-        // }
-        // self = doc.bson
+            // // self = .bool(true)
+            // for bsonType in BSON.allBSONTypes.values {
+            //     guard bsonType != Int32.self && bsonType != Int64.self && bsonType != BSONDocument.self else {
+            //         continue
+            //     }
+            //     if let value = try bsonType.init(fromExtJSON: json, keyPath: keyPath) {
+            //         self = value.bson
+            //         return
+            //     }
+            // }
+            // Document accepts any JSON object so it should be tried after all the more specific BSON types are tried
+            // guard let doc = try BSONDocument(fromExtJSON: json, keyPath: keyPath) else {
+            //     throw BSONError.InternalError(message: "Could not parse BSON from \(json)")
+            // }
+            // self = doc.bson
     }
 
     /// Converts this `BSON` to a corresponding `JSON` in relaxed extendedJSON format.

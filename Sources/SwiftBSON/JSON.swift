@@ -1,51 +1,57 @@
-import Foundation
 import ExtrasJSON
+import Foundation
 
-public typealias JSON = JSONValue
+internal struct JSON {
+    internal let value: JSONValue
+
+    internal init(_ value: JSONValue) {
+        self.value = value
+    }
+}
 
 extension JSON: ExpressibleByFloatLiteral {
     internal init(floatLiteral value: Double) {
-        self = .number(value)
-
-extension JSON: ExpressibleByFloatLiteral {
-    public init(floatLiteral value: Double) {
-        self = .number(String(value))
+        self.value = .number(String(value))
     }
 }
 
 extension JSON: ExpressibleByIntegerLiteral {
     internal init(integerLiteral value: Int) {
         // The number `JSON` type is a Double, so we cast any integers to doubles.
-        self = .number(String(value))
+        self.value = .number(String(value))
     }
 }
 
 extension JSON: ExpressibleByStringLiteral {
     internal init(stringLiteral value: String) {
-        self = .string(value)
+        self.value = .string(value)
     }
 }
 
 extension JSON: ExpressibleByBooleanLiteral {
     internal init(booleanLiteral value: Bool) {
-        self = .bool(value)
+        self.value = .bool(value)
     }
 }
 
 extension JSON: ExpressibleByArrayLiteral {
     internal init(arrayLiteral elements: JSON...) {
-        self = .array(elements)
+        self.value = .array(elements.map(\.value))
     }
 }
 
 extension JSON: ExpressibleByDictionaryLiteral {
     internal init(dictionaryLiteral elements: (String, JSON)...) {
-        self = .object([String: JSON](uniqueKeysWithValues: elements))
+        var map: [String: JSONValue] = [:]
+        for (k, v) in elements {
+            map[k] = v.value
+        }
+        self.value = .object(map)
     }
 }
 
 /// Value Getters
-extension JSON {
+extension JSONValue {
     /// If this `JSON` is a `.double`, return it as a `Double`. Otherwise, return nil.
     internal var doubleValue: Double? {
         guard case let .number(n) = self else {
@@ -71,7 +77,7 @@ extension JSON {
     }
 
     /// If this `JSON` is a `.array`, return it as a `[JSON]`. Otherwise, return nil.
-    internal var arrayValue: [JSON]? {
+    internal var arrayValue: [JSONValue]? {
         guard case let .array(a) = self else {
             return nil
         }
@@ -79,7 +85,7 @@ extension JSON {
     }
 
     /// If this `JSON` is a `.object`, return it as a `[String: JSON]`. Otherwise, return nil.
-    internal var objectValue: [String: JSON]? {
+    internal var objectValue: [String: JSONValue]? {
         guard case let .object(o) = self else {
             return nil
         }
@@ -88,7 +94,7 @@ extension JSON {
 }
 
 /// Helpers
-extension JSON {
+extension JSONValue {
     /// Helper function used in `BSONValue` initializers that take in extended JSON.
     /// If the current JSON is an object with only the specified key, return its value.
     ///
@@ -101,7 +107,7 @@ extension JSON {
     ///    - or `nil` if `self` is not an `object` or does not contain the given `key`
     ///
     /// - Throws: `DecodingError` if `self` has too many keys
-    internal func unwrapObject(withKey key: String, keyPath: [String]) throws -> JSON? {
+    internal func unwrapObject(withKey key: String, keyPath: [String]) throws -> JSONValue? {
         guard case let .object(obj) = self else {
             return nil
         }
@@ -132,7 +138,11 @@ extension JSON {
     ///    - or `nil` if `self` is not an `object` or does not contain the given keys
     ///
     /// - Throws: `DecodingError` if `self` has too many keys
-    internal func unwrapObject(withKeys key1: String, _ key2: String, keyPath: [String]) throws -> (JSON, JSON)? {
+    internal func unwrapObject(
+        withKeys key1: String,
+        _ key2: String,
+        keyPath: [String]
+    ) throws -> (JSONValue, JSONValue)? {
         guard case let .object(obj) = self else {
             return nil
         }
@@ -152,4 +162,4 @@ extension JSON {
     }
 }
 
-// extension JSON: Equatable {}
+extension JSON: Equatable {}

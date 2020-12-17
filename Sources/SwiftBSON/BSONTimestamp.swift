@@ -40,7 +40,7 @@ public struct BSONTimestamp: BSONValue, Equatable, Hashable {
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // canonical and relaxed extended JSON
-        guard let value = try json.unwrapObject(withKey: "$timestamp", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$timestamp", keyPath: keyPath) else {
             return nil
         }
         guard let timestampObj = value.objectValue else {
@@ -84,8 +84,8 @@ public struct BSONTimestamp: BSONValue, Equatable, Hashable {
     internal func toCanonicalExtendedJSON() -> JSON {
         [
             "$timestamp": [
-                "t": .number(String(self.timestamp)),
-                "i": .number(String(self.increment))
+                "t": JSON(.number(String(self.timestamp))),
+                "i": JSON(.number(String(self.increment)))
             ]
         ]
     }

@@ -80,7 +80,7 @@ extension BSONRegularExpression: BSONValue {
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // canonical and relaxed extended JSON
-        guard let value = try json.unwrapObject(withKey: "$regularExpression", keyPath: keyPath) else {
+        guard let value = try json.value.unwrapObject(withKey: "$regularExpression", keyPath: keyPath) else {
             return nil
         }
         guard
@@ -106,8 +106,8 @@ extension BSONRegularExpression: BSONValue {
     internal func toCanonicalExtendedJSON() -> JSON {
         [
             "$regularExpression": [
-                "pattern": .string(self.pattern),
-                "options": .string(self.options)
+                "pattern": JSON(.string(self.pattern)),
+                "options": JSON(.string(self.options))
             ]
         ]
     }

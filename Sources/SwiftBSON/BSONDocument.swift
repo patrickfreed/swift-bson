@@ -1,3 +1,4 @@
+import ExtrasJSON
 import Foundation
 import NIO
 
@@ -63,7 +64,7 @@ public struct BSONDocument {
         self.storage.buffer.writeBytes([0])
     }
 
-    internal init(fromJSONObj obj: [String: JSON]) throws {
+    internal init(fromJSONObj obj: [String: JSONValue]) throws {
         self = BSONDocument()
         self.storage.buffer.moveWriterIndex(to: self.storage.buffer.writerIndex - 1)
         for (k, v) in obj {
@@ -72,7 +73,7 @@ public struct BSONDocument {
         self.storage.buffer.writeInteger(0, as: UInt8.self)
     }
 
-    internal mutating func appendJSON(_ json: JSON, forKey key: String) throws {
+    internal mutating func appendJSON(_ json: JSONValue, forKey key: String) throws {
         switch json {
         case let .string(s):
             self.storage.encodedLength += self.storage.append(key: key, value: .string(s))
@@ -92,7 +93,7 @@ public struct BSONDocument {
 
             guard let byteLength = Int32(exactly: self.storage.buffer.writerIndex - start) else {
                 fatalError("Data is \(self.storage.buffer.writerIndex - start) bytes, "
-                               + "but maximum allowed BSON document size is \(Int32.max) bytes")
+                    + "but maximum allowed BSON document size is \(Int32.max) bytes")
             }
             self.storage.buffer.setInteger(byteLength, at: start, endianness: .little)
             // Set encodedLength in reserved space
@@ -485,16 +486,6 @@ extension BSONDocument: Equatable {
     }
 }
 
-func time<T>(desc: String, printTime: Bool = true, f: () throws -> T) rethrows -> (Double, T) {
-    let date = Date()
-    let out = try f()
-    let elapsedMS = date.timeIntervalSinceNow * -1000
-    if printTime {
-    print("\(desc): \(elapsedMS)ms")
-    }
-    return (elapsedMS, out)
-}
-
 extension BSONDocument: BSONValue {
     /*
      * Initializes a `BSONDocument` from ExtendedJSON.
@@ -512,40 +503,35 @@ extension BSONDocument: BSONValue {
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
         // canonical and relaxed extended JSON
-        guard case let .object(obj) = json else {
+        guard case let .object(obj) = json.value else {
             return nil
         }
 
         var doc: [(String, BSON)] = []
         for (key, val) in obj {
-            // let (t, bsonValue) = try time(desc: "bson", printTime: false) { try BSON(fromExtJSON: val, keyPath: keyPath + [key]) }
-
-            // if t >= 0.05 {
-            //     print("SLOW: \(bsonValue.type) \(bsonValue) \(t)ms")
-            // }
-            let bsonValue = try BSON(fromExtJSON: val, keyPath: keyPath + [key])
+            let bsonValue = try BSON(fromExtJSON: JSON(val), keyPath: keyPath + [key])
             doc.append((key, bsonValue))
         }
-        
-        self = BSONDocument(keyValuePairs: doc) 
+
+        self = BSONDocument(keyValuePairs: doc)
     }
 
     /// Converts this `BSONDocument` to a corresponding `JSON` in relaxed extendedJSON format.
     internal func toRelaxedExtendedJSON() -> JSON {
-        var obj: [String: JSON] = [:]
+        var obj: [String: JSONValue] = [:]
         for (key, value) in self {
-            obj[key] = value.toRelaxedExtendedJSON()
+            obj[key] = value.toRelaxedExtendedJSON().value
         }
-        return .object(obj)
+        return JSON(.object(obj))
     }
 
     /// Converts this `BSONDocument` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        var obj: [String: JSON] = [:]
+        var obj: [String: JSONValue] = [:]
         for (key, value) in self {
-            obj[key] = value.toCanonicalExtendedJSON()
+            obj[key] = value.toCanonicalExtendedJSON().value
         }
-        return .object(obj)
+        return JSON(.object(obj))
     }
 
     internal static var bsonType: BSONType { .document }

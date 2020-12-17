@@ -16,13 +16,20 @@ extension Double: BSONValue {
      *   - `DecodingError` if `json` is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        switch json {
+        switch json.value {
         case let .number(n):
             // relaxed extended JSON
-            self = Double(n)!
+            guard let num = Double(n) else {
+                throw DecodingError._extendedJSONError(
+                    keyPath: keyPath,
+                    debugDescription: "Could not parse `Double` from \"\(n)\", " +
+                        "input must be a 64-bit signed floating point as a decimal string"
+                )
+            }
+            self = num
         case .object:
             // canonical extended JSON
-            guard let value = try json.unwrapObject(withKey: "$numberDouble", keyPath: keyPath) else {
+            guard let value = try json.value.unwrapObject(withKey: "$numberDouble", keyPath: keyPath) else {
                 return nil
             }
             guard
@@ -59,13 +66,13 @@ extension Double: BSONValue {
         if self.isInfinite || self.isNaN {
             return self.toCanonicalExtendedJSON()
         } else {
-            return .number(String(self))
+            return JSON(.number(String(self)))
         }
     }
 
     /// Converts this `Double` to a corresponding `JSON` in canonical extendedJSON format.
     internal func toCanonicalExtendedJSON() -> JSON {
-        ["$numberDouble": .string(self.formatForExtendedJSON())]
+        ["$numberDouble": JSON(.string(self.formatForExtendedJSON()))]
     }
 
     internal static var bsonType: BSONType { .double }
