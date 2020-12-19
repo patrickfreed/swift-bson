@@ -33,15 +33,114 @@ public class ExtendedJSONDecoder {
         // Data --> JSONValue --> BSON --> T
         // Takes in JSON as `Data` encoded with `.utf8` and runs it through a `JSONDecoder` to get an
         // instance of the `JSON` enum.
-
         let json = try JSONParser().parse(bytes: data)
 
         // Then a `BSON` enum instance is created via the `JSON`.
-        let bson = try BSON(fromExtJSON: JSON(json), keyPath: [])
+        let bson = try json.toBSON(keyPath: [])
 
         // The `BSON` is then passed through a `BSONDecoder` where it is outputted as a `T`
         let bsonDecoder = BSONDecoder()
         bsonDecoder.userInfo = self.userInfo
         return try bsonDecoder.decode(T.self, fromBSON: bson)
+    }
+
+}
+
+extension JSONValue {
+    internal enum DecodeScalarResult {
+        case scalar(BSON)
+        case encodedObject([String: JSONValue])
+        case encodedArray([JSONValue])
+    }
+
+    fileprivate func toBSON(keyPath: [String]) throws -> BSON {
+        switch try self.decodeScalar(keyPath: keyPath) {
+        case let .scalar(s):
+            return s
+        case let .encodedArray(arr):
+            fatalError("todo arrays")
+        case let .encodedObject(obj):
+            return .document(try BSONDocument(fromJSONObj: obj, keyPath: keyPath))
+        }
+    }
+
+    private static var wrapperKeys: Set<String> = {
+        return Set(BSON.allBSONTypes.values.map { $0.extJSONTypeWrapperKey })
+    }()
+
+    internal func decodeScalar(keyPath: [String]) throws -> DecodeScalarResult {
+        switch self {
+        case let .string(s):
+            return .scalar(.string(s))
+        case let .bool(b):
+            return .scalar(.bool(b))
+        case let .number(numString):
+            if let int32 = Int32(numString) {
+                return .scalar(.int32(int32))
+            } else if let int64 = Int64(numString) {
+                return .scalar(.int64(int64))
+            } else if let double = Double(numString) {
+                return .scalar(.double(double))
+            } else {
+                throw DecodingError._extendedJSONError(
+                    keyPath: keyPath,
+                    debugDescription: "Could not parse number \"\(numString)\""
+                )
+            }
+        case .null:
+            return .scalar(.null)
+        case let .object(obj):
+            if obj.count == 1 {
+                switch obj.first! {
+                case let (BSONRegularExpression.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int32(Int32(s)!))
+                case let (BSONObjectID.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.objectID(try BSONObjectID(s)))
+                case let (BSONBinary.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int64(Int64(s)!))
+                case let (BSONBinary.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int64(Int64(s)!))
+                case let (BSONCode.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int64(Int64(s)!))
+                case let (BSONUndefined.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int64(Int64(s)!))
+                case let (Int32.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int32(Int32(s)!))
+                case let (Int64.extJSONTypeWrapperKey, .string(s)):
+                    return .scalar(.int64(Int64(s)!))
+                default:
+                    return .encodedObject(obj)
+                }
+            } else if obj.count == 2 {
+                switch obj.first!.key {
+                case BSONCode.extJSONTypeWrapperKey, "$scope":
+                    return .scalar(try BSONCodeWithScope(fromExtJSON: JSON(self), keyPath: keyPath)!.bson)
+                default:
+                    return .encodedObject(obj)
+                }
+            } else {
+                guard Self.wrapperKeys.isDisjoint(with: obj.keys) else {
+                    throw BSONError.InternalError(message: "todo")
+                }
+            }
+            for (bsonType, bsonValueType) in BSON.allBSONTypes {
+                guard bsonType != .document && bsonType != .array else {
+                    continue
+                }
+                // guard obj.keys.contains(bsonValueType.extJSONTypeWrapperKey) else {
+                // guard obj[bsonValueType.extJSONTypeWrapperKey] != nil else {
+                //     continue
+                // }
+                guard let value = try bsonValueType.init(fromExtJSON: JSON(.object(obj)), keyPath: keyPath) else {
+                    // throw BSONError.InternalError(message: "failed to decode \(bsonValueType.self) from \(obj)") 
+                    // fatalError("woo")
+                    continue
+                }
+                return .scalar(value.bson)
+            }
+            return .encodedObject(obj)
+        case let .array(arr):
+            return .encodedArray(arr)
+        }
     }
 }

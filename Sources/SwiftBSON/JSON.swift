@@ -111,16 +111,18 @@ extension JSONValue {
         guard case let .object(obj) = self else {
             return nil
         }
-        guard let value = obj[key] else {
+
+        guard obj.count == 1 else {
+            // guard obj.index(forKey: key) == nil else {
+            //     throw DecodingError._extendedJSONError(
+            //         keyPath: keyPath,
+            //         debugDescription: "Expected only \"\(key)\", found too many keys: \(obj.keys)"
+            //     )
+            // }
             return nil
         }
-        guard obj.count == 1 else {
-            throw DecodingError._extendedJSONError(
-                keyPath: keyPath,
-                debugDescription: "Expected only \"\(key)\", found too many keys: \(obj.keys)"
-            )
-        }
-        return value
+
+        return obj.first?.value
     }
 
     /// Helper function used in `BSONValue` initializers that take in extended JSON.

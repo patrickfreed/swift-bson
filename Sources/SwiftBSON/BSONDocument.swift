@@ -64,43 +64,79 @@ public struct BSONDocument {
         self.storage.buffer.writeBytes([0])
     }
 
-    internal init(fromJSONObj obj: [String: JSONValue]) throws {
+    internal init(fromJSONObj obj: [String: JSONValue], keyPath: [String]) throws {
         self = BSONDocument()
         self.storage.buffer.moveWriterIndex(to: self.storage.buffer.writerIndex - 1)
+        var length = 0
         for (k, v) in obj {
-            try self.appendJSON(v, forKey: k)
+            length += try self.appendJSON(v, forKey: k, keyPath: keyPath)
         }
         self.storage.buffer.writeInteger(0, as: UInt8.self)
+        self.storage.encodedLength += length
     }
 
-    internal mutating func appendJSON(_ json: JSONValue, forKey key: String) throws {
-        switch json {
-        case let .string(s):
-            self.storage.encodedLength += self.storage.append(key: key, value: .string(s))
-        case let .object(obj):
-            self.storage.buffer.writeInteger(BSONType.document.rawValue, as: UInt8.self)
-            self.storage.buffer.writeCString(key)
-            let start = self.storage.buffer.writerIndex
+    @discardableResult
+    internal mutating func appendJSON(_ json: JSONValue, forKey key: String, keyPath: [String]) throws -> Int {
+        switch try json.decodeScalar(keyPath: keyPath + [key]) {
+        case let .scalar(s):
+            return self.storage.append(key: key, value: s)
+        case let .encodedArray(arr):
+            fatalError("woot")
+        case let .encodedObject(obj):
+            // the subdocument entry metadata length (key, bsontype)
+            var subdocumentMetaLength = 0
 
+            subdocumentMetaLength += self.storage.buffer.writeInteger(BSONType.document.rawValue, as: UInt8.self)
+            subdocumentMetaLength += self.storage.buffer.writeCString(key)
+
+            let start = self.storage.buffer.writerIndex
             // reserve space for our byteLength that will be calculated
             self.storage.buffer.writeInteger(0, endianness: .little, as: Int32.self)
 
             for (key, value) in obj {
-                try self.appendJSON(value, forKey: key)
+                try self.appendJSON(value, forKey: key, keyPath: keyPath)
             }
+
             // BSON null terminator
             self.storage.buffer.writeInteger(0, as: UInt8.self)
 
-            guard let byteLength = Int32(exactly: self.storage.buffer.writerIndex - start) else {
+            guard let subdocumentTotalLength = Int32(exactly: self.storage.buffer.writerIndex - start) else {
                 fatalError("Data is \(self.storage.buffer.writerIndex - start) bytes, "
                     + "but maximum allowed BSON document size is \(Int32.max) bytes")
             }
-            self.storage.buffer.setInteger(byteLength, at: start, endianness: .little)
-            // Set encodedLength in reserved space
-            self.storage.encodedLength += Int(byteLength)
-        default:
-            throw BSONError.InternalError(message: "not imeplemented \(json)")
+            // set the length of the subdocument in the reserved space.
+            self.storage.buffer.setInteger(subdocumentTotalLength, at: start, endianness: .little)
+
+            return subdocumentMetaLength + Int(subdocumentTotalLength)
         }
+        // switch json {
+        // case let .string(s):
+        //     let newl = self.storage.append(key: key, value: .string(s))
+        //     print("appending \(key) = \(s) length = \(newl)")
+        //     self.storage.encodedLength += newl
+        // case let .bool(b):
+        //     self.storage.encodedLength += self.storage.append(key: key, value: .bool(b))
+        // case let .number(numString):
+        //     let val: BSON
+        //     if let int32 = Int32(numString) {
+        //         val = .int32(int32)
+        //     } else if let int64 = Int64(numString) {
+        //         val = .int64(int64)
+        //     } else if let double = Double(numString) {
+        //         val = .double(double)
+        //     } else {
+        //         throw DecodingError._extendedJSONError(
+        //             keyPath: keyPath + [key],
+        //             debugDescription: "Could not parse number \"\(numString)\""
+        //         )
+        //     }
+        // case let .null:
+            
+
+        // case let .object(obj):
+        // default:
+        //     throw BSONError.InternalError(message: "not imeplemented \(json)")
+        // }
     }
 
     /**
@@ -502,18 +538,19 @@ extension BSONDocument: BSONValue {
      *   - `DecodingError` if `json` is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        // canonical and relaxed extended JSON
-        guard case let .object(obj) = json.value else {
-            return nil
-        }
+        // // canonical and relaxed extended JSON
+        // guard case let .object(obj) = json.value else {
+        //     return nil
+        // }
 
-        var doc: [(String, BSON)] = []
-        for (key, val) in obj {
-            let bsonValue = try BSON(fromExtJSON: JSON(val), keyPath: keyPath + [key])
-            doc.append((key, bsonValue))
-        }
+        // var doc: [(String, BSON)] = []
+        // for (key, val) in obj {
+        //     let bsonValue = try BSON(fromExtJSON: JSON(val), keyPath: keyPath + [key])
+        //     doc.append((key, bsonValue))
+        // }
 
-        self = BSONDocument(keyValuePairs: doc)
+        // self = BSONDocument(keyValuePairs: doc)
+        fatalError("todo")
     }
 
     /// Converts this `BSONDocument` to a corresponding `JSON` in relaxed extendedJSON format.

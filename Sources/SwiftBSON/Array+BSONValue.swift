@@ -17,13 +17,14 @@ extension Array: BSONValue where Element == BSON {
      *   - `DecodingError` if elements within the array is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        // canonical and relaxed extended JSON
-        guard case let .array(a) = json.value else {
-            return nil
-        }
-        self = try a.enumerated().map { index, element in
-            try BSON(fromExtJSON: JSON(element), keyPath: keyPath + [String(index)])
-        }
+        // // canonical and relaxed extended JSON
+        // guard case let .array(a) = json.value else {
+        //     return nil
+        // }
+        // self = try a.enumerated().map { index, element in
+        //     try BSON(fromExtJSON: JSON(element), keyPath: keyPath + [String(index)])
+        // }
+        fatalError("todo")
     }
 
     /// Converts this `BSONArray` to a corresponding `JSON` in relaxed extendedJSON format.
