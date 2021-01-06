@@ -641,6 +641,10 @@ extension BSONDocument: BSONValue {
         // var doc = ByteBuffer(self.storage.buffer.readableBytesView)
         buffer.writeBytes(self.storage.buffer.readableBytesView)
     }
+
+    internal mutating func mutWrite(to buffer: inout ByteBuffer) {
+        buffer.writeBuffer(&self.storage.buffer)
+    }
 }
 
 extension BSONDocument: CustomStringConvertible {

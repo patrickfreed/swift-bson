@@ -19,7 +19,22 @@ public class ExtendedJSONDecoder {
         return Set(BSON.allBSONTypes.values.map { $0.extJSONTypeWrapperKey })
     }()
 
-    private static var wrapperKeyMap: [String: BSONValue.Type] = {
+    private static var wrapperKeyMap: [String: [BSONValue.Type]] = {
+        var map: [String: [BSONValue.Type]] = [:]
+        for t in BSON.allBSONTypes.values {
+            for k in t.extJSONTypeWrapperKeys {
+                if var existingList = map[k] {
+                    existingList.append(t.self)
+                    map[k] = existingList
+                } else {
+                    map[k] = [t]
+                }
+            }
+        }
+        return map
+    }()
+
+    private static var wrapperKeyMap1: [String: BSONValue.Type] = {
         var map: [String: BSONValue.Type] = [:]
         for t in BSON.allBSONTypes.values {
             map[t.extJSONTypeWrapperKey] = t.self
@@ -123,10 +138,12 @@ public class ExtendedJSONDecoder {
             func appendElement(_ value: JSONValue, to storage: inout BSONDocument.BSONDocumentStorage, forKey key: String) throws -> Int {
                 switch try self.decodeScalar(value, keyPath: []) {
                 case let .scalar(s):
+                    // print("appending scalar \(key) = \(s)")
                     return storage.append(key: key, value: s)
                 case let .encodedArray(l):
                     fatalError("todo")
                 case let .encodedObject(obj):
+                    // print("appending obj \(obj)")
                     var bytes = 0
                     bytes += storage.appendElementHeader(key: key, bsonType: .document)
                     bytes += try appendObject(obj, to: &storage)
@@ -162,29 +179,40 @@ public class ExtendedJSONDecoder {
         case .null:
             return .scalar(.null)
         case let .object(obj):
-            if obj.count == 1, let (key, _) = obj.first {
-                if let t = Self.wrapperKeyMap[key] {
-                    return .scalar(try t.init(fromExtJSON: JSON(.object(obj)), keyPath: [])!.bson)
+            // print("decode scalar: \(obj)")
+            if let (key, _) = obj.first {
+                if let types = Self.wrapperKeyMap[key] {
+                    // print("got ext json types \(types) for \(obj)")
+                    for type in types {
+                        guard let value = try type.init(fromExtJSON: JSON(.object(obj)), keyPath: []) else {
+                            continue
+                        }
+                        return .scalar(value.bson)
+                    }
                 }
-            } else if obj.count == 2 {
-                switch obj.first!.key {
-                case BSONCode.extJSONTypeWrapperKey, "$scope":
-                    return .scalar(try BSONCodeWithScope(fromExtJSON: JSON(json), keyPath: keyPath)!.bson)
-                default:
-                    break
-                }
-            }
+                // if let t = Self.wrapperKeyMap1[key] {
+                //     return .scalar(try t.init(fromExtJSON: JSON(.object(obj)), keyPath: [])!.bson)
+                // }
+            } // else if obj.count == 2 { // special case for CodeWithScope since it can't be distinguished by a single key
+            //     switch obj.first!.key {
+            //     case BSONCode.extJSONTypeWrapperKey, "$scope":
+            //         return .scalar(try BSONCodeWithScope(fromExtJSON: JSON(json), keyPath: keyPath)!.bson)
+            //     default:
+            //         break
+            //     }
+            // }
             guard Self.wrapperKeys.isDisjoint(with: obj.keys) else {
                 throw BSONError.InternalError(message: "todo")
             }
 
-            // return .encodedObject(obj)
+            // print("not parsing obj")
+            // var doc = BSONDocument()
+            // for (k, v) in obj {
+            //     doc[k] = try self.decodeScalar(v, keyPath: []).bson
+            // }
+            // return .scalar(.document(doc))
 
-            var doc = BSONDocument()
-            for (k, v) in obj {
-                doc[k] = try self.decodeScalar(v, keyPath: []).bson
-            }
-            return .scalar(.document(doc))
+            return .encodedObject(obj)
         case let .array(arr):
             return .encodedArray(arr)
         }
