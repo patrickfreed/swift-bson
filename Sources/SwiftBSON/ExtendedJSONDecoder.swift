@@ -110,39 +110,32 @@ public class ExtendedJSONDecoder {
         case let .encodedArray(arr):
             fatalError("todo arrays")
         case let .encodedObject(obj):
-
-            func appendObject(storage: inout BSONDocument.BSONDocumentStorage, obj: [String: JSONValue]) throws -> Int {
+            func appendObject(_ object: [String: JSONValue], to storage: inout BSONDocument.BSONDocumentStorage) throws -> Int {
                 return try storage.buildDocument { storage in
                     var bytes = 0
                     for (k, v) in obj {
-                        bytes += try appendValue(to: &storage, v: v, forKey: k)
+                        bytes += try appendElement(v, to: &storage, forKey: k)
                     }
                     return bytes
                 }
             }
 
-            func appendValue(to storage: inout BSONDocument.BSONDocumentStorage, v: JSONValue, forKey k: String) throws -> Int {
-                switch try self.decodeScalar(v, keyPath: []) {
+            func appendElement(_ value: JSONValue, to storage: inout BSONDocument.BSONDocumentStorage, forKey key: String) throws -> Int {
+                switch try self.decodeScalar(value, keyPath: []) {
                 case let .scalar(s):
-                    return storage.append(key: k, value: s)
-                    // try s.bsonValue.write(to: &storage.buffer)
+                    return storage.append(key: key, value: s)
                 case let .encodedArray(l):
                     fatalError("todo")
                 case let .encodedObject(obj):
                     var bytes = 0
-                    bytes += storage.appendElementHeader(key: k, bsonType: .document)
-                    bytes += try appendObject(storage: &storage, obj: obj)
+                    bytes += storage.appendElementHeader(key: key, bsonType: .document)
+                    bytes += try appendObject(obj, to: &storage)
                     return bytes
                 }
             }
 
-            // var doc = BSONDocument()
-            // for (k, v) in obj {
-                
-            // }
-
             var storage = BSONDocument.BSONDocumentStorage()
-            try appendObject(storage: &storage, obj: obj)
+            try appendObject(obj, to: &storage)
             return .document(try BSONDocument(storage: storage))
         }
     }
@@ -169,34 +162,10 @@ public class ExtendedJSONDecoder {
         case .null:
             return .scalar(.null)
         case let .object(obj):
-            if obj.count == 1 {
-                let (key, value) = obj.first!
+            if obj.count == 1, let (key, _) = obj.first {
                 if let t = Self.wrapperKeyMap[key] {
-                    // print("init \(t) from \(obj)")
                     return .scalar(try t.init(fromExtJSON: JSON(.object(obj)), keyPath: [])!.bson)
                 }
-                // switch obj.first! {
-                // case let (BSONRegularExpression.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int32(Int32(s)!))
-                // case let (BSONObjectID.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.objectID(try BSONObjectID(s)))
-                // case let (BSONBinary.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int64(Int64(s)!))
-                // case let (BSONBinary.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int64(Int64(s)!))
-                // case let (BSONCode.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int64(Int64(s)!))
-                // case let (BSONUndefined.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int64(Int64(s)!))
-                // case let (Int32.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int32(Int32(s)!))
-                // case let (Int64.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.int64(Int64(s)!))
-                // case let (Double.extJSONTypeWrapperKey, .string(s)):
-                //     return .scalar(.double(Double(s)!))
-                // default:
-                //     break
-                // }
             } else if obj.count == 2 {
                 switch obj.first!.key {
                 case BSONCode.extJSONTypeWrapperKey, "$scope":
