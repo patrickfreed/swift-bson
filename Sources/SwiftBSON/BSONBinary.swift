@@ -143,6 +143,8 @@ public struct BSONBinary: Equatable, Hashable {
 }
 
 extension BSONBinary: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$binary", "$uuid"]
+
     /*
      * Initializes a `Binary` from ExtendedJSON.
      *

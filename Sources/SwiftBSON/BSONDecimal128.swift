@@ -477,6 +477,8 @@ public struct BSONDecimal128: Equatable, Hashable, CustomStringConvertible {
 }
 
 extension BSONDecimal128: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$numberDecimal"]
+
     /*
      * Initializes a `Decimal128` from ExtendedJSON.
      *

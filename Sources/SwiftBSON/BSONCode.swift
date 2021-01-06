@@ -28,6 +28,8 @@ public struct BSONCodeWithScope: Equatable, Hashable {
 }
 
 extension BSONCode: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$code"]
+
     /*
      * Initializes a `BSONCode` from ExtendedJSON.
      *
@@ -98,6 +100,8 @@ extension BSONCode: BSONValue {
 }
 
 extension BSONCodeWithScope: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$code", "$scope"]
+
     /*
      * Initializes a `BSONCode` from ExtendedJSON.
      *

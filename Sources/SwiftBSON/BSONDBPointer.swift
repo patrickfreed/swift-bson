@@ -16,6 +16,8 @@ public struct BSONDBPointer: Equatable, Hashable {
 }
 
 extension BSONDBPointer: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$dbPointer"]
+
     /*
      * Initializes a `BSONDBPointer` from ExtendedJSON.
      *

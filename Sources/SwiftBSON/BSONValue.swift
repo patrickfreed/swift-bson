@@ -8,9 +8,7 @@ internal protocol BSONValue: Codable {
     var bson: BSON { get }
 
     /// The `$`-prefixed keys that indicate an object is an extended JSON object wrapper
-    /// for this `BSONValue`. (e.g. for Int32, this value is the set containing "$numberInt").
-    static var extJSONTypeWrapperKey: String { get }
-
+    /// for this `BSONValue`. (e.g. for Int32, this value is ["$numberInt"]).
     static var extJSONTypeWrapperKeys: [String] { get }
 
     /// Initializes a corresponding `BSON` from the provided `ByteBuffer`,
@@ -37,9 +35,6 @@ extension BSONValue {
         Self.bsonType
     }
 
-    internal static var extJSONTypeWrapperKey: String { "$TODO" }
-
-    internal static var extJSONTypeWrapperKeys: [String] { [Self.extJSONTypeWrapperKey] }
     /// Default `Decodable` implementation that throws an error if executed with non-`BSONDecoder`.
     ///
     /// BSON types' `Deodable` conformance currently only works with `BSONDecoder`, but in the future will be able

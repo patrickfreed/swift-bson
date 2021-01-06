@@ -1,6 +1,8 @@
 import NIO
 
 extension Bool: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = []
+
     /*
      * Initializes a `Bool` from ExtendedJSON.
      *

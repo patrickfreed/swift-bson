@@ -64,97 +64,6 @@ public struct BSONDocument {
         self.storage.buffer.writeBytes([0])
     }
 
-    internal init(storage: BSONDocument.BSONDocumentStorage) throws {
-        // self.keySet = try storage.retrieveKeys()
-        self.storage = storage
-        self.keySet = Set()
-    }
-
-    internal init(fromJSONObj obj: [String: JSONValue], keyPath: [String]) throws {
-        self = BSONDocument()
-        self.storage.buffer.moveWriterIndex(to: self.storage.buffer.writerIndex - 1)
-        var length = 0
-        for (k, v) in obj {
-            length += try self.appendJSON(v, forKey: k, keyPath: keyPath)
-        }
-        self.storage.buffer.writeInteger(0, as: UInt8.self)
-        self.storage.encodedLength += length
-    }
-
-    internal mutating func appendF(forKey key: String, _ appendFunc: (inout BSONDocumentStorage) throws -> Int) throws -> Int {
-        0
-    }
-
-    internal mutating func buildSubdocument(_ appendFunc: () throws -> Int) throws -> Int {
-        0
-    }
-
-    @discardableResult
-    internal mutating func appendJSON(_ json: JSONValue, forKey key: String, keyPath: [String]) throws -> Int {
-        self.keySet.insert(key)
-        switch try json.decodeScalar(keyPath: keyPath + [key]) {
-        case let .scalar(s):
-            return self.storage.append(key: key, value: s)
-        case let .encodedArray(arr):
-            fatalError("woot")
-        case let .encodedObject(obj):
-            // the subdocument entry metadata length (key, bsontype)
-            var subdocumentMetaLength = 0
-
-            subdocumentMetaLength += self.storage.buffer.writeInteger(BSONType.document.rawValue, as: UInt8.self)
-            subdocumentMetaLength += self.storage.buffer.writeCString(key)
-
-            let start = self.storage.buffer.writerIndex
-            // reserve space for our byteLength that will be calculated
-            self.storage.buffer.writeInteger(0, endianness: .little, as: Int32.self)
-
-            for (key, value) in obj {
-                try self.appendJSON(value, forKey: key, keyPath: keyPath)
-            }
-
-            // BSON null terminator
-            self.storage.buffer.writeInteger(0, as: UInt8.self)
-
-            guard let subdocumentTotalLength = Int32(exactly: self.storage.buffer.writerIndex - start) else {
-                fatalError("Data is \(self.storage.buffer.writerIndex - start) bytes, "
-                    + "but maximum allowed BSON document size is \(Int32.max) bytes")
-            }
-            // set the length of the subdocument in the reserved space.
-            self.storage.buffer.setInteger(subdocumentTotalLength, at: start, endianness: .little)
-
-            return subdocumentMetaLength + Int(subdocumentTotalLength)
-        }
-
-        // switch json {
-        // case let .string(s):
-        //     let newl = self.storage.append(key: key, value: .string(s))
-        //     print("appending \(key) = \(s) length = \(newl)")
-        //     self.storage.encodedLength += newl
-        // case let .bool(b):
-        //     self.storage.encodedLength += self.storage.append(key: key, value: .bool(b))
-        // case let .number(numString):
-        //     let val: BSON
-        //     if let int32 = Int32(numString) {
-        //         val = .int32(int32)
-        //     } else if let int64 = Int64(numString) {
-        //         val = .int64(int64)
-        //     } else if let double = Double(numString) {
-        //         val = .double(double)
-        //     } else {
-        //         throw DecodingError._extendedJSONError(
-        //             keyPath: keyPath + [key],
-        //             debugDescription: "Could not parse number \"\(numString)\""
-        //         )
-        //     }
-        // case let .null:
-            
-
-        // case let .object(obj):
-        // default:
-        //     throw BSONError.InternalError(message: "not imeplemented \(json)")
-        // }
-    }
-
     /**
      * Initializes a new `BSONDocument` from the provided BSON data.
      *
@@ -180,11 +89,11 @@ public struct BSONDocument {
      */
     public init(fromBSON bson: ByteBuffer) throws {
         let storage = BSONDocumentStorage(bson)
-        let keys = try storage.retrieveKeys()
+        let keys = try storage.validateAndRetrieveKeys()
         self = BSONDocument(fromUnsafeBSON: storage, keys: keys)
     }
 
-    private init(fromUnsafeBSON storage: BSONDocumentStorage, keys: Set<String>) {
+    internal init(fromUnsafeBSON storage: BSONDocumentStorage, keys: Set<String>) {
         self.storage = storage
         self.keySet = keys
     }
@@ -453,6 +362,7 @@ public struct BSONDocument {
             return self.buffer.writerIndex - writer
         }
 
+        /// Append the header (key and BSONType) for a given element.
         @discardableResult internal mutating func appendElementHeader(key: String, bsonType: BSONType) -> Int {
             let writer = self.buffer.writerIndex
             self.buffer.writeInteger(bsonType.rawValue, as: UInt8.self)
@@ -460,6 +370,10 @@ public struct BSONDocument {
             return self.buffer.writerIndex - writer
         }
 
+        /// Build a document at the current position in the storage via the provided closure which returns
+        /// how many bytes it wrote.
+        ///
+        /// This may be used to build up a fresh document or a subdocument.
         internal mutating func buildDocument(_ appendFunc: (inout Self) throws -> Int) throws -> Int {
             var totalBytes = 0
 
@@ -476,15 +390,6 @@ public struct BSONDocument {
             self.buffer.setInteger(Int32(totalBytes), at: lengthIndex, endianness: .little, as: Int32.self)
 
             return totalBytes
-        }
-
-        internal func retrieveKeys() throws -> Set<String> {
-            let iter = BSONDocumentIterator(over: self.buffer)
-            var keySet = Set<String>()
-            while let key = try iter.nextKey() {
-                keySet.insert(key)
-            }
-            return keySet
         }
 
         @discardableResult
@@ -572,8 +477,11 @@ extension BSONDocument: Equatable {
 }
 
 extension BSONDocument: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = []
+
     /*
      * Initializes a `BSONDocument` from ExtendedJSON.
+     * This is not as performant as ExtendedJSONDecoder.decode, so it should only be used for small documents.
      *
      * Parameters:
      *   - `json`: a `JSON` representing the canonical or relaxed form of ExtendedJSON for any `BSONDocument`.
@@ -587,19 +495,16 @@ extension BSONDocument: BSONValue {
      *   - `DecodingError` if `json` is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        // // canonical and relaxed extended JSON
-        // guard case let .object(obj) = json.value else {
-        //     return nil
-        // }
-
-        // var doc: [(String, BSON)] = []
-        // for (key, val) in obj {
-        //     let bsonValue = try BSON(fromExtJSON: JSON(val), keyPath: keyPath + [key])
-        //     doc.append((key, bsonValue))
-        // }
-
-        // self = BSONDocument(keyValuePairs: doc)
-        fatalError("todo")
+        // canonical and relaxed extended JSON
+        guard case let .object(obj) = json.value else {
+            return nil
+        }
+        var doc: [(String, BSON)] = []
+        for (key, val) in obj {
+            let bsonValue = try BSON(fromExtJSON: JSON(val), keyPath: keyPath + [key])
+            doc.append((key, bsonValue))
+        }
+        self = BSONDocument(keyValuePairs: doc)
     }
 
     /// Converts this `BSONDocument` to a corresponding `JSON` in relaxed extendedJSON format.
@@ -630,20 +535,14 @@ extension BSONDocument: BSONValue {
             throw BSONError.InternalError(message: "Cannot read document byte length")
         }
         buffer.moveReaderIndex(to: reader)
-        // guard let bytes = buffer.readBytes(length: Int(encodedLength)) else {
-        //     throw BSONError.InternalError(message: "Cannot read document contents")
-        // }
-        let buf = buffer.readSlice(length: Int(encodedLength))!
-        return .document(try BSONDocument(fromBSON: buf))
+        guard let bytes = buffer.readBytes(length: Int(encodedLength)) else {
+            throw BSONError.InternalError(message: "Cannot read document contents")
+        }
+        return .document(try BSONDocument(fromBSON: Data(bytes)))
     }
 
     internal func write(to buffer: inout ByteBuffer) {
-        // var doc = ByteBuffer(self.storage.buffer.readableBytesView)
         buffer.writeBytes(self.storage.buffer.readableBytesView)
-    }
-
-    internal mutating func mutWrite(to buffer: inout ByteBuffer) {
-        buffer.writeBuffer(&self.storage.buffer)
     }
 }
 
@@ -673,11 +572,13 @@ extension BSONDocument {
             let otherValue = other[k]
             if case let (.document(docA), .document(docB)?) = (v, otherValue) {
                 guard docA.equalsIgnoreKeyOrder(docB) else {
+                    print("SORTEDEQ: subdoc\n \(docA)\n DID NOT EQUAL\n\(docB)")
                     return false
                 }
                 continue
             }
             guard v == otherValue else {
+                print("SORTEDEQ: \(v) != \(otherValue)")
                 return false
             }
         }

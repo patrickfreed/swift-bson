@@ -1,6 +1,8 @@
 import NIO
 
 extension String: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$maxKey"]
+
     /*
      * Initializes a `String` from ExtendedJSON.
      *

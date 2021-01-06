@@ -4,6 +4,7 @@ import NIO
 /// application development, you should use the BSON date type (represented in this library by `Date`.)
 /// - SeeAlso: https://docs.mongodb.com/manual/reference/bson-types/#timestamps
 public struct BSONTimestamp: BSONValue, Equatable, Hashable {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$timestamp"]
     internal static var bsonType: BSONType { .timestamp }
     internal var bson: BSON { .timestamp(self) }
 

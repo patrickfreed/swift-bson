@@ -2,6 +2,8 @@ import Foundation
 import NIO
 
 extension Date: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$date"]
+
     /*
      * Initializes a `Date` from ExtendedJSON.
      *

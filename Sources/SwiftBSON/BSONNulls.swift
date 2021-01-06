@@ -2,6 +2,8 @@ import NIO
 
 /// A struct to represent the BSON null type.
 internal struct BSONNull: BSONValue, Equatable {
+    internal static let extJSONTypeWrapperKeys: [String] = []
+
     /*
      * Initializes a `BSONNull` from ExtendedJSON.
      *
@@ -52,6 +54,8 @@ internal struct BSONNull: BSONValue, Equatable {
 
 /// A struct to represent the BSON undefined type.
 internal struct BSONUndefined: BSONValue, Equatable {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$undefined"]
+
     /*
      * Initializes a `BSONUndefined` from ExtendedJSON.
      *
@@ -108,6 +112,8 @@ internal struct BSONUndefined: BSONValue, Equatable {
 
 /// A struct to represent the BSON MinKey type.
 internal struct BSONMinKey: BSONValue, Equatable {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$minKey"]
+
     /*
      * Initializes a `BSONMinKey` from ExtendedJSON.
      *
@@ -164,6 +170,8 @@ internal struct BSONMinKey: BSONValue, Equatable {
 
 /// A struct to represent the BSON MinKey type.
 internal struct BSONMaxKey: BSONValue, Equatable {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$maxKey"]
+
     /*
      * Initializes a `BSONMaxKey` from ExtendedJSON.
      *

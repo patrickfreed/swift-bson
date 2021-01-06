@@ -64,6 +64,8 @@ public struct BSONRegularExpression: Equatable, Hashable {
 }
 
 extension BSONRegularExpression: BSONValue {
+    internal static let extJSONTypeWrapperKeys: [String] = ["$regularExpression"]
+
     /*
      * Initializes a `BSONRegularExpression` from ExtendedJSON.
      *

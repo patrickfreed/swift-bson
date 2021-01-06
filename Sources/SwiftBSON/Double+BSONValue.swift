@@ -1,7 +1,7 @@
 import NIO
 
 extension Double: BSONValue {
-    internal static let extJSONTypeWrapperKey: String = "$numberDouble"
+    internal static let extJSONTypeWrapperKeys: [String] = ["$numberDouble"]
 
     /*
      * Initializes a `Double` from ExtendedJSON.

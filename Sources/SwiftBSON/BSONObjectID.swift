@@ -6,7 +6,7 @@ import NIOConcurrencyHelpers
 public struct BSONObjectID: Equatable, Hashable, CustomStringConvertible {
     internal static let LENGTH = 12
 
-    internal static var extJSONTypeWrapperKey: String = "$oid"
+    internal static let extJSONTypeWrapperKeys: [String] = ["$oid"]
 
     /// This `BSONObjectID`'s data represented as a `String`.
     public var hex: String { self.oid.reduce("") { $0 + String(format: "%02x", $1) } }
@@ -81,7 +81,6 @@ extension BSONObjectID: BSONValue {
      *   - `nil` if the provided value is not an `ObjectID`.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        // self = BSONObjectID()
         // canonical and relaxed extended JSON
         guard let value = try json.value.unwrapObject(withKey: "$oid", keyPath: keyPath) else {
             return nil

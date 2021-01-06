@@ -1,7 +1,7 @@
 import NIO
 
 extension Int32: BSONValue {
-    internal static var extJSONTypeWrapperKey: String = "$numberInt"
+    internal static let extJSONTypeWrapperKeys: [String] = ["$numberInt"]
 
     /*
      * Initializes an `Int32` from ExtendedJSON.
@@ -73,7 +73,7 @@ extension Int32: BSONValue {
 }
 
 extension Int64: BSONValue {
-    internal static var extJSONTypeWrapperKey: String = "$numberLong"
+    internal static let extJSONTypeWrapperKeys: [String] = ["$numberLong"]
 
     /*
      * Initializes an `Int64` from ExtendedJSON.

@@ -106,23 +106,21 @@ extension JSONValue {
     ///    - a JSON which is the value at the given `key` in `self`
     ///    - or `nil` if `self` is not an `object` or does not contain the given `key`
     ///
-    /// - Throws: `DecodingError` if `self` has too many keys
+    /// - Throws: `DecodingError` if `self` includes the expected key along with other keys
     internal func unwrapObject(withKey key: String, keyPath: [String]) throws -> JSONValue? {
         guard case let .object(obj) = self else {
             return nil
         }
-
-        guard obj.count == 1 else {
-            // guard obj.index(forKey: key) == nil else {
-            //     throw DecodingError._extendedJSONError(
-            //         keyPath: keyPath,
-            //         debugDescription: "Expected only \"\(key)\", found too many keys: \(obj.keys)"
-            //     )
-            // }
+        guard let value = obj[key] else {
             return nil
         }
-
-        return obj.first?.value
+        guard obj.count == 1 else {
+            throw DecodingError._extendedJSONError(
+                keyPath: keyPath,
+                debugDescription: "Expected only \"\(key)\", found too many keys: \(obj.keys)"
+            )
+        }
+        return value
     }
 
     /// Helper function used in `BSONValue` initializers that take in extended JSON.

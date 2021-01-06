@@ -2,6 +2,8 @@ import NIO
 
 /// An extension of `Array` to represent the BSON array type.
 extension Array: BSONValue where Element == BSON {
+    internal static let extJSONTypeWrapperKeys: [String] = []
+
     /*
      * Initializes an `Array` from ExtendedJSON.
      *
@@ -17,14 +19,13 @@ extension Array: BSONValue where Element == BSON {
      *   - `DecodingError` if elements within the array is a partial match or is malformed.
      */
     internal init?(fromExtJSON json: JSON, keyPath: [String]) throws {
-        // // canonical and relaxed extended JSON
-        // guard case let .array(a) = json.value else {
-        //     return nil
-        // }
-        // self = try a.enumerated().map { index, element in
-        //     try BSON(fromExtJSON: JSON(element), keyPath: keyPath + [String(index)])
-        // }
-        fatalError("todo")
+        // canonical and relaxed extended JSON
+        guard case let .array(a) = json.value else {
+            return nil
+        }
+        self = try a.enumerated().map { index, element in
+            try BSON(fromExtJSON: JSON(element), keyPath: keyPath + [String(index)])
+        }
     }
 
     /// Converts this `BSONArray` to a corresponding `JSON` in relaxed extendedJSON format.
