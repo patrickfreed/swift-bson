@@ -73,7 +73,7 @@ extension Int32: BSONValue {
 }
 
 extension Int64: BSONValue {
-    internal static var extJSONTypeWrapperKey: String = "$numberInt"
+    internal static var extJSONTypeWrapperKey: String = "$numberLong"
 
     /*
      * Initializes an `Int64` from ExtendedJSON.

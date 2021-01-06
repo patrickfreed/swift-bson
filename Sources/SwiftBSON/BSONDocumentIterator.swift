@@ -36,6 +36,16 @@ public class BSONDocumentIterator: IteratorProtocol {
      *   - `InternalError` if the underlying buffer contains invalid BSON
      */
     internal func nextThrowing() throws -> BSONDocument.KeyValuePair? {
+        guard let (bsonType, key) = try self.readHeader() else {
+            return nil
+        }
+
+        let bson = try self.readElementValue(bsonType: bsonType, key: key)
+
+        return (key: key, value: bson)
+    }
+
+    internal func readHeader() throws -> (BSONType, key: String)? {
         guard self.buffer.readableBytes != 0 else {
             // Iteration has been exhausted
             guard self.exhausted else {
@@ -75,17 +85,75 @@ public class BSONDocumentIterator: IteratorProtocol {
         }
 
         let key = try self.buffer.readCString()
-        guard let bson = try BSON.allBSONTypes[type]?.read(from: &buffer) else {
+
+        return (type, key: key)
+    }
+
+    internal func readElementValue(bsonType: BSONType, key: String) throws -> BSON {
+        guard let bson = try BSON.allBSONTypes[bsonType]?.read(from: &self.buffer) else {
             throw BSONIterationError(
                 buffer: self.buffer,
                 key: key,
-                type: type,
-                typeByte: typeByte,
+                type: bsonType,
+                typeByte: bsonType.rawValue,
                 message: "Cannot decode type"
             )
         }
-        return (key: key, value: bson)
+        return bson
     }
+
+    internal func nextKey() throws -> String? {
+        guard let (bsonType, key) = try self.readHeader() else {
+            return nil
+        }
+
+        // print("read \(bsonType) \(key)")
+        switch bsonType {
+        case .int32:
+            self.buffer.moveReaderIndex(forwardBy: 4)
+        case .int64:
+            self.buffer.moveReaderIndex(forwardBy: 8)
+        case .double:
+            self.buffer.moveReaderIndex(forwardBy: 8)
+        case .bool:
+            self.buffer.moveReaderIndex(forwardBy: 1)
+        case .string:
+            let len = try self.readElementValue(bsonType: bsonType, key: key).stringValue!.utf8.count
+            // self.buffer.moveReaderIndex(forwardBy: len + 4 + 1)
+        case .document, .array:
+            fatalError("todo read type")
+        default:
+            try self.readElementValue(bsonType: bsonType, key: key)
+        }
+
+        return key
+    }
+
+    // internal func moveToNextElement() -> Bool {
+    //     guard self.buffer.readableBytes != 0 else {
+    //         self.exhausted = true
+    //         return false
+    //     }
+
+    //     guard let typeByte = self.buffer.readInteger(as: UInt8.self) else {
+    //         throw BSONIterationError(
+    //             buffer: self.buffer,
+    //             message: "Cannot read type indicator from bson"
+    //         )
+    //     }
+
+    //     guard typeByte != 0 else {
+    //         // Iteration exhausted after we've read the null terminator (special case)
+    //         guard self.buffer.readableBytes == 0 else {
+    //             throw BSONIterationError(
+    //                 buffer: self.buffer,
+    //                 message: "Bytes remain after document iteration exhausted"
+    //             )
+    //         }
+    //         self.exhausted = true
+    //         return false
+    //     }
+    // }
 
     /// Finds the key in the underlying buffer, and returns the [startIndex, endIndex) containing the corresponding
     /// element.
