@@ -9,6 +9,27 @@ internal struct JSON {
     }
 }
 
+extension JSON: Encodable {
+    /// Encode a `JSON` to a container by encoding the type of this `JSON` instance.
+    internal func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self.value {
+        case let .number(n):
+            try container.encode(Double(n))
+        case let .string(s):
+            try container.encode(s)
+        case let .bool(b):
+            try container.encode(b)
+        case let .array(a):
+            try container.encode(a.map(JSON.init))
+        case let .object(o):
+            try container.encode(o.mapValues(JSON.init))
+        case .null:
+            try container.encodeNil()
+        }
+    }
+}
+
 extension JSON: ExpressibleByFloatLiteral {
     internal init(floatLiteral value: Double) {
         self.value = .number(String(value))
@@ -162,4 +183,13 @@ extension JSONValue {
     }
 }
 
-extension JSON: Equatable {}
+extension JSON: Equatable {
+    internal static func == (lhs: JSON, rhs: JSON) -> Bool {
+        switch (lhs.value, rhs.value) {
+        case let (.number(lhsNum), .number(rhsNum)):
+            return Double(lhsNum) == Double(rhsNum)
+        default:
+            return lhs.value == rhs.value
+        }
+    }
+}

@@ -75,12 +75,12 @@ public class ExtendedJSONEncoder {
             json = bson.bsonValue.toRelaxedExtendedJSON()
         }
 
-        var bytes: [UInt8] = []
-        json.value.appendBytes(to: &bytes)
+        // var bytes: [UInt8] = []
+        // json.value.appendBytes(to: &bytes)
 
-        return Data(bytes)
-        // let jsonEncoder = JSONEncoder()
-        // jsonEncoder.outputFormatting = self.outputFormatting.value
-        // return try jsonEncoder.encode(json)
+        // return Data(bytes)
+        let jsonEncoder = JSONEncoder()
+        jsonEncoder.outputFormatting = self.outputFormatting.value
+        return try jsonEncoder.encode(json)
     }
 }

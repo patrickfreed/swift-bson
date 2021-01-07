@@ -5,10 +5,9 @@ import Nimble
 import XCTest
 
 /// Cleans and normalizes given JSON Data for comparison purposes
-public func clean(json: Data) throws -> JSONValue {
+public func clean(json: Data) throws -> JSON {
     do {
-        let jsonEnum = try JSONParser().parse(bytes: json)
-        return jsonEnum
+        return JSON(try JSONParser().parse(bytes: json))
     } catch {
         fatalError("json should be decodable to jsonEnum")
     }
@@ -27,6 +26,8 @@ public func cleanEqual(_ expectedValue: String) -> Predicate<Data> {
         guard let expectedValueData = expectedValue.data(using: .utf8) else {
             return PredicateResult(status: .fail, message: msg)
         }
+        print("actual \(String(data: actualValue, encoding: .utf8)!)")
+        print("expected \(expectedValue)")
         let cleanedActual = try clean(json: actualValue)
         let cleanedExpected = try clean(json: expectedValueData)
         let matches = cleanedActual == cleanedExpected
