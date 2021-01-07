@@ -572,13 +572,11 @@ extension BSONDocument {
             let otherValue = other[k]
             if case let (.document(docA), .document(docB)?) = (v, otherValue) {
                 guard docA.equalsIgnoreKeyOrder(docB) else {
-                    print("SORTEDEQ: subdoc\n \(docA)\n DID NOT EQUAL\n\(docB)")
                     return false
                 }
                 continue
             }
             guard v == otherValue else {
-                print("SORTEDEQ: \(v) != \(otherValue)")
                 return false
             }
         }
