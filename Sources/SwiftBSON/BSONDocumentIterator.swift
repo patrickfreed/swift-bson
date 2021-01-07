@@ -119,7 +119,7 @@ public class BSONDocumentIterator: IteratorProtocol {
             self.buffer.moveReaderIndex(forwardBy: 1)
         case .string:
             let len = try self.readElementValue(bsonType: bsonType, key: key).stringValue!.utf8.count
-            // self.buffer.moveReaderIndex(forwardBy: len + 4 + 1)
+        // self.buffer.moveReaderIndex(forwardBy: len + 4 + 1)
         case .document, .array:
             fatalError("todo read type")
         default:

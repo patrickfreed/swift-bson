@@ -32,7 +32,6 @@ extension Double: BSONValue {
         case .object:
             // canonical extended JSON
             guard let value = try json.value.unwrapObject(withKey: "$numberDouble", keyPath: keyPath) else {
-                print("couldnt unwrap numberdouble from json")
                 return nil
             }
             guard
@@ -47,7 +46,6 @@ extension Double: BSONValue {
             }
             self = double
         default:
-            print("got something weird \(json)")
             return nil
         }
     }

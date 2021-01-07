@@ -188,6 +188,12 @@ extension JSON: Equatable {
         switch (lhs.value, rhs.value) {
         case let (.number(lhsNum), .number(rhsNum)):
             return Double(lhsNum) == Double(rhsNum)
+        case (_, .number), (.number, _):
+            return false
+        case let (.object(lhsObject), .object(rhsObject)):
+            return lhsObject.mapValues(JSON.init) == rhsObject.mapValues(JSON.init)
+        case let (.array(lhsArray), .array(rhsArray)):
+            return lhsArray.map(JSON.init) == rhsArray.map(JSON.init)
         default:
             return lhs.value == rhs.value
         }

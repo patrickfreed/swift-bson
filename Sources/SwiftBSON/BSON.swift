@@ -114,7 +114,6 @@ public enum BSON {
         self = doc.bson
     }
 
-
     /// Converts this `BSON` to a corresponding `JSON` in relaxed extendedJSON format.
     internal func toRelaxedExtendedJSON() -> JSON {
         self.bsonValue.toRelaxedExtendedJSON()

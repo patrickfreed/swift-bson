@@ -17,14 +17,15 @@ public class ExtendedJSONDecoder {
 
     /// A set of all the possible extenededJSON wrapper keys.
     private static var wrapperKeySet: Set<String> = {
-        return Set(ExtendedJSONDecoder.wrapperKeyMap.keys)
+        Set(ExtendedJSONDecoder.wrapperKeyMap.keys)
     }()
 
     /// A map from extended JSON wrapper keys (e.g. "$numberLong") to the BSON type(s) that they correspond to.
-    /// Some types are associated with multiple wrapper keys (e.g. "$code" and "$scope" both map to `BSONCodeWithScope`).
-    /// Some wrapper keys are associated with multiple types (e.g. "$code" maps to both `BSONCode` and
-    /// `BSONCodeWithScope`).
-    /// Try decoding each of the types returned from the map until one works to find the proper decoding.
+    ///
+    /// Some types are associated with multiple wrapper keys (e.g. "$code" and "$scope" both map to
+    /// `BSONCodeWithScope`). Some wrapper keys are associated with multiple types (e.g. "$code" maps to both
+    /// `BSONCode` and `BSONCodeWithScope`). Attempt to decode each of the types returned from the map until one works
+    /// to find the proper decoding.
     private static var wrapperKeyMap: [String: [BSONValue.Type]] = {
         var map: [String: [BSONValue.Type]] = [:]
         for t in BSON.allBSONTypes.values {
@@ -77,13 +78,13 @@ public class ExtendedJSONDecoder {
         case let .scalar(s):
             return s
         case let .encodedArray(arr):
-            let bsonArr = try arr.enumerated().map { (i, jsonValue) in
+            let bsonArr = try arr.enumerated().map { i, jsonValue in
                 try self.decodeBSONFromJSON(jsonValue, keyPath: keyPath + ["\(i)"])
             }
             return .array(bsonArr)
         case let .encodedObject(obj):
             var storage = BSONDocument.BSONDocumentStorage()
-            _ = try appendObject(obj, to: &storage)
+            _ = try self.appendObject(obj, to: &storage)
             return .document(BSONDocument(fromUnsafeBSON: storage, keys: Set(obj.keys)))
         }
     }
@@ -93,7 +94,7 @@ public class ExtendedJSONDecoder {
         _ object: [String: JSONValue],
         to storage: inout BSONDocument.BSONDocumentStorage
     ) throws -> Int {
-        return try storage.buildDocument { storage in
+        try storage.buildDocument { storage in
             var bytes = 0
             for (k, v) in object {
                 bytes += try self.appendElement(v, to: &storage, forKey: k)
@@ -131,7 +132,7 @@ public class ExtendedJSONDecoder {
     }
 
     /// Attempt to decode a scalar value from either a JSON scalar or an extended JSON encoded scalar.
-    /// If the value is a regular document or an array, simply return it as-is for recursive processing. 
+    /// If the value is a regular document or an array, simply return it as-is for recursive processing.
     internal func decodeScalar(_ json: JSONValue, keyPath: [String]) throws -> DecodeScalarResult {
         switch json {
         case let .string(s):
