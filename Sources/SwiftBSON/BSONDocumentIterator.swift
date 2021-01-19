@@ -96,9 +96,9 @@ public class BSONDocumentIterator: IteratorProtocol {
     }
 
     /// Finds an element with the specified key in the document. Returns nil if the key is not found.
-    internal static func findKey(key: String, in document: BSONDocument) throws -> Bool {
+    internal static func findKey(key: StaticString, in document: BSONDocument) throws -> Bool {
         let iter = document.makeIterator()
-        let keyUTF8 = key.utf8
+        // let keyUTF8 = key.utf8
         while let type = try iter.readNextType() {
             // guard let foundKey = try iter.buffer.sliceCString() else {
             //     return nil
@@ -121,25 +121,28 @@ public class BSONDocumentIterator: IteratorProtocol {
                 // while let byte = body.first, byte == keyUTF8[i], i < keyUTF8.count {
                     
                 // }
-                let keyIndex = keyUTF8.startIndex
-                var keyIter = keyUTF8.makeIterator()
+                // var keyIter = keyUTF8.makeIterator()
 
-                for (i, byte) in body.enumerated() {
-                    // print("byte=\(byte) ascii=\(String(bytes: [byte], encoding: .ascii) ?? "nil")")
-                    guard byte != 0 else {
-                        return (i + 1, i == keyUTF8.count && matchedString)
-                    }
-
-                    if matchedString {
-                        guard let keyByte = keyIter.next() else {
-                            matchedString = false
-                            continue
+                // return key.withUTF8Buffer { keyBuffer -> (Int, Bool?) in
+                    // var keyIter = keyBuffer.makeIterator()
+                    for (i, byte) in body.enumerated() {
+                        // print("byte=\(byte) ascii=\(String(bytes: [byte], encoding: .ascii) ?? "nil")")
+                        guard byte != 0 else {
+                            // return (i + 1, i == keyBuffer.count && matchedString)
+                            return (i + 1, false)
                         }
-                        matchedString = byte == keyByte
-                    }
-                }
 
-                return (body.count, nil)
+                        // if matchedString {
+                        //     guard let keyByte = keyIter.next() else {
+                        //         matchedString = false
+                        //         continue
+                        //     }
+                        //     matchedString = byte == keyByte
+                        // }
+                    }
+                    return (body.count, nil)
+                // }
+
             }
 
             guard let m = matched else {

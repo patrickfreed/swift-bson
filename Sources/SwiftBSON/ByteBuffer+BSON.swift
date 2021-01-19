@@ -13,7 +13,7 @@ extension ByteBuffer {
         var string: [UInt8] = []
         for _ in 0..<Int(BSON_MAX_SIZE) {
             // guard let b = self.readByte() else {
-            guard let b = self.readInteger(endianness: .little, as: UInt8.self) else {
+            guard let b = self.readByte() else {
                 throw BSONError.InternalError(message: "Failed to read CString, unable to read byte from \(self)")
             }
 

@@ -78,6 +78,10 @@ public struct BSONDocument {
         self = try BSONDocument(fromBSON: buffer)
     }
 
+    public init (fromUnsafeBSONBuffer bson: ByteBuffer) throws {
+        self.init(fromUnsafeBSON: BSONDocumentStorage(bson), keys: [])
+    }
+
     /**
      * Initializes a new BSONDocument from the provided BSON data.
      * The buffer must have readableBytes equal to the BSON's leading size indicator.
