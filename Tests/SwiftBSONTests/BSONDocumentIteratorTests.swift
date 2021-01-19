@@ -26,4 +26,10 @@ final class DocumentIteratorTests: BSONTestCase {
         expect([range.startIndex, range.endIndex - range.startIndex]).to(equal([15, bsonBytes.count]))
         expect(slice).to(equal(bsonBytes))
     }
+
+    func testBlah() {
+
+        let doc: BSONDocument = ["x": 1, "y": 2]
+        print(doc["y"] ?? "nil")
+    }
 }

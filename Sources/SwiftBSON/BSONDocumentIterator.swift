@@ -66,7 +66,7 @@ public class BSONDocumentIterator: IteratorProtocol {
             return nil
         }
 
-        guard let nextByte = self.buffer.readInteger(endianness: .little, as: UInt8.self) else {
+        guard let nextByte = self.buffer.readByte() else {
             throw BSONIterationError(
                 buffer: self.buffer,
                 message: "There are no readable bytes remaining, but a null terminator was not encountered"
@@ -96,18 +96,129 @@ public class BSONDocumentIterator: IteratorProtocol {
     }
 
     /// Finds an element with the specified key in the document. Returns nil if the key is not found.
-    internal static func find(key: String, in document: BSONDocument) throws -> BSONDocument.KeyValuePair? {
+    internal static func findKey(key: String, in document: BSONDocument) throws -> Bool {
         let iter = document.makeIterator()
+        let keyUTF8 = key.utf8
         while let type = try iter.readNextType() {
-            let foundKey = try iter.buffer.readCString()
-            if foundKey == key {
-                // the map contains a value for every valid BSON type.
-                // swiftlint:disable:next force_unwrapping
-                let bson = try BSON.allBSONTypes[type]!.read(from: &iter.buffer)
-                return (key: key, value: bson)
+            // guard let foundKey = try iter.buffer.sliceCString() else {
+            //     return nil
+            // }
+
+            // guard foundKey.readableBytesView.elementsEqual(keyUTF8) else {
+            //     try iter.skipNextValue(type: type)
+            //     continue
+            // }
+
+            let matched = iter.buffer.readWithUnsafeReadableBytes { body -> (Int, Bool?) in
+                var finishedString = false
+                var matchedString = true
+
+                // if body[keyUTF8.count] != 0 {
+                //     matchedString = false
+                // }
+
+                // var i = 0
+                // while let byte = body.first, byte == keyUTF8[i], i < keyUTF8.count {
+                    
+                // }
+                let keyIndex = keyUTF8.startIndex
+                var keyIter = keyUTF8.makeIterator()
+
+                for (i, byte) in body.enumerated() {
+                    // print("byte=\(byte) ascii=\(String(bytes: [byte], encoding: .ascii) ?? "nil")")
+                    guard byte != 0 else {
+                        return (i + 1, i == keyUTF8.count && matchedString)
+                    }
+
+                    if matchedString {
+                        guard let keyByte = keyIter.next() else {
+                            matchedString = false
+                            continue
+                        }
+                        matchedString = byte == keyByte
+                    }
+                }
+
+                return (body.count, nil)
             }
 
-            try iter.skipNextValue(type: type)
+            guard let m = matched else {
+                fatalError("whoops")
+            }
+
+            guard m else {
+                try iter.skipNextValue(type: type)
+                continue
+            }
+
+            // the map contains a value for every valid BSON type.
+            // swiftlint:disable:next force_unwrapping
+            // let bson = try BSON.allBSONTypes[type]!.read(from: &iter.buffer)
+            return true
+        }
+        return false
+    }
+
+    /// Finds an element with the specified key in the document. Returns nil if the key is not found.
+    internal static func find(key: String, in document: BSONDocument) throws -> BSONDocument.KeyValuePair? {
+        let iter = document.makeIterator()
+        let keyUTF8 = key.utf8
+        while let type = try iter.readNextType() {
+            // guard let foundKey = try iter.buffer.sliceCString() else {
+            //     return nil
+            // }
+
+            // guard foundKey.readableBytesView.elementsEqual(keyUTF8) else {
+            //     try iter.skipNextValue(type: type)
+            //     continue
+            // }
+
+            let matched = iter.buffer.readWithUnsafeReadableBytes { body -> (Int, Bool?) in
+                var finishedString = false
+                var matchedString = true
+
+                // if body[keyUTF8.count] != 0 {
+                //     matchedString = false
+                // }
+
+                // var i = 0
+                // while let byte = body.first, byte == keyUTF8[i], i < keyUTF8.count {
+                    
+                // }
+                let keyIndex = keyUTF8.startIndex
+                var keyIter = keyUTF8.makeIterator()
+
+                for (i, byte) in body.enumerated() {
+                    // print("byte=\(byte) ascii=\(String(bytes: [byte], encoding: .ascii) ?? "nil")")
+                    guard byte != 0 else {
+                        return (i + 1, i == keyUTF8.count && matchedString)
+                    }
+
+                    if matchedString {
+                        guard let keyByte = keyIter.next() else {
+                            matchedString = false
+                            continue
+                        }
+                        matchedString = byte == keyByte
+                    }
+                }
+
+                return (body.count, nil)
+            }
+
+            guard let m = matched else {
+                fatalError("whoops")
+            }
+
+            guard m else {
+                try iter.skipNextValue(type: type)
+                continue
+            }
+
+            // the map contains a value for every valid BSON type.
+            // swiftlint:disable:next force_unwrapping
+            let bson = try BSON.allBSONTypes[type]!.read(from: &iter.buffer)
+            return (key: key, value: bson)
         }
         return nil
     }

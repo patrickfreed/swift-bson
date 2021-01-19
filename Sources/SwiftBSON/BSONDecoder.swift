@@ -512,7 +512,7 @@ private struct _BSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainer
     private let decoder: _BSONDecoder
 
     /// A reference to the container we're reading from.
-    fileprivate let container: BSONDocument
+    fileprivate let container: [String: BSON]
 
     /// The path of coding keys taken to get to this point in decoding.
     public private(set) var codingPath: [CodingKey]
@@ -520,7 +520,11 @@ private struct _BSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainer
     /// Initializes `self`, referencing the given decoder and container.
     fileprivate init(referencing decoder: _BSONDecoder, wrapping container: BSONDocument) {
         self.decoder = decoder
-        self.container = container
+        var map: [String: BSON] = [:]
+        for (k, v) in container {
+            map[k] = v
+        }
+        self.container = map
         self.codingPath = decoder.codingPath
     }
 
@@ -531,7 +535,7 @@ private struct _BSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainer
 
     /// Returns a Boolean value indicating whether the decoder contains a value associated with the given key.
     public func contains(_ key: Key) -> Bool {
-        self.container.hasKey(key.stringValue)
+        self.container[key.stringValue] != nil
     }
 
     /// A string description of a CodingKey, for use in error messages.

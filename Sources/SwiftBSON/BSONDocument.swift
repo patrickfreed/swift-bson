@@ -236,7 +236,10 @@ public struct BSONDocument {
      * - SeeAlso: https://docs.mongodb.com/manual/core/document/#the-id-field
      */
     public func withID() throws -> BSONDocument {
-        guard !self.keySet.contains("_id") else {
+        // guard !self.keySet.contains("_id") else {
+        //     return self
+        // }
+        guard try BSONDocumentIterator.findKey(key: "_id", in: self) != true else {
             return self
         }
 
